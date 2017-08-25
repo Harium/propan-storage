@@ -6,7 +6,7 @@
 
     <groupId>com.harium.propan</groupId>
     <artifactId>propan-storage</artifactId>
-    <version>1.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
     <name>Propan Storage</name>
     <description>3D Data Structures</description>

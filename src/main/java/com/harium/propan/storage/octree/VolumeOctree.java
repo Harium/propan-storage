@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.harium.storage.octree;
+package com.harium.propan.storage.octree;
 
 import com.harium.etyl.linear.Point3D;
 import com.harium.propan.linear.BoundingBox3D;

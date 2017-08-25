@@ -1,4 +1,4 @@
-package com.harium.storage.octree;
+package com.harium.propan.storage.octree;
 
 import com.harium.etyl.linear.Point3D;
 import com.harium.propan.linear.BoundingBox3D;
