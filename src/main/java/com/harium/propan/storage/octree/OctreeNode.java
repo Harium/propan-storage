@@ -10,15 +10,17 @@ import static com.harium.propan.storage.octree.Octree.TopRightBack;
 import static com.harium.propan.storage.octree.Octree.TopRightFront;
 
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.BoundingBox;
+import com.badlogic.gdx.math.collision.Triangle;
 import java.util.ArrayList;
 import java.util.List;
 
 public class OctreeNode {
 
-    private int depth = 0;
+    protected int depth = 0;
 
     // Represent the boundary of the BoundingBox
-    protected Vector3 max, min;
+    protected BoundingBox box;
 
     protected OctreeNode[] children;
     private List<Object> geometries = null;// TODO CHANGE TO CONSTANT
@@ -28,54 +30,53 @@ public class OctreeNode {
     }
 
     public OctreeNode(float x1, float y1, float z1, float x2, float y2, float z2) {
-        min = new Vector3(x1, y1, z1);
-        max = new Vector3(x2, y2, z2);
+        box = new BoundingBox(new Vector3(x1, y1, z1), new Vector3(x2, y2, z2));
     }
 
     protected void initChildren() {
         children = new OctreeNode[8];
 
-        float midx = (max.x + min.x) / 2;
-        float midy = (max.y + min.y) / 2;
-        float midz = (max.z + min.z) / 2;
+        float midx = (box.max.x + box.min.x) * 0.5f;
+        float midy = (box.max.y + box.min.y) * 0.5f;
+        float midz = (box.max.z + box.min.z) * 0.5f;
 
         children[TopLeftFront] = new OctreeNode(
-            min.x, midy, midz,
-            midx, max.y, max.z)
+            box.min.x, midy, midz,
+            midx, box.max.y, box.max.z)
             .depth(depth + 1);
 
         children[TopRightFront] = new OctreeNode(
             midx, midy, midz,
-            max.x, max.y, max.z)
+            box.max.x, box.max.y, box.max.z)
             .depth(depth + 1);
 
         children[TopRightBack] = new OctreeNode(
-            midx, midy, min.z,
-            max.x, max.y, midz)
+            midx, midy, box.min.z,
+            box.max.x, box.max.y, midz)
             .depth(depth + 1);
 
         children[TopLeftBack] = new OctreeNode(
-            min.x, midy, min.z,
-            midx, max.y, midz)
+            box.min.x, midy, box.min.z,
+            midx, box.max.y, midz)
             .depth(depth + 1);
 
         children[BottomLeftFront] = new OctreeNode(
-            min.x, min.y, midz,
-            midx, midy, max.z)
+            box.min.x, box.min.y, midz,
+            midx, midy, box.max.z)
             .depth(depth + 1);
 
         children[BottomRightFront] = new OctreeNode(
-            midx, min.y, midz,
-            max.x, midy, max.z)
+            midx, box.min.y, midz,
+            box.max.x, midy, box.max.z)
             .depth(depth + 1);
 
         children[BottomRightBack] = new OctreeNode(
-            midx, min.y, min.z,
-            max.x, midy, midz)
+            midx, box.min.y, box.min.z,
+            box.max.x, midy, midz)
             .depth(depth + 1);
 
         children[BottomLeftBack] = new OctreeNode(
-            min.x, min.y, min.z,
+            box.min.x, box.min.y, box.min.z,
             midx, midy, midz)
             .depth(depth + 1);
     }
@@ -85,102 +86,36 @@ public class OctreeNode {
         return this;
     }
 
-    // Function to insert a point in the octree
-    public boolean insert(Vector3 p, int maxDepth) {
-        // If the point is out of bounds
-        if (!contains(p)) {
-            return false;
-        }
-
-        //If is not Leaf
-        if (depth < maxDepth) {
-            if (children == null) {
-                initChildren();
-            }
-            // Binary search to insert the point
-            int pos = findPosition(p);
-            return children[pos].insert(p, maxDepth);
-        } else {
-            // is leaf
-            if (geometries == null) {
-                geometries = new ArrayList<>();
-            }
-            geometries.add(p);
-            return true;
-        }
+    public boolean contains(Vector3 p) {
+        return OctreePointHandler.contains(this, p);
     }
 
-    public boolean contains(Vector3 p) {
-        // If the point is out of bounds
-        if (p.x > max.x
-            || p.x < min.x
-            || p.y > max.y
-            || p.y < min.y
-            || p.z > max.z
-            || p.z < min.z) {
-
-            return false;
-        }
-        return true;
+    public boolean insert(Vector3 p, int maxDepth) {
+        return OctreePointHandler.insert(this, p, maxDepth);
     }
 
     public OctreeNode queryNode(Vector3 p) {
-        // If point is out of bound
-        if (!contains(p)) {
-            return null;
-        }
-
-        int pos = findPosition(p);
-
-        // If not a leaf
-        if (children != null) {
-            return children[pos].queryNode(p);
-        }
-
-        return this;
+        return OctreePointHandler.queryNode(this, p);
     }
 
-    private int findPosition(Vector3 p) {
-        // Perform binary search
-        // for each ordinate
-        float midx = (max.x + min.x) / 2;
-        float midy = (max.y + min.y) / 2;
-        float midz = (max.z + min.z) / 2;
+    // Triangle
+    public boolean contains(Triangle triangle) {
+        return OctreeTriangleHandler.contains(this, triangle);
+    }
 
-        int pos;
+    public boolean insert(Triangle triangle, int maxDepth) {
+        return OctreeTriangleHandler.insert(this, triangle, maxDepth);
+    }
 
-        // Deciding the position
-        // where to move
-        if (p.x <= midx) {
-            if (p.y <= midy) {
-                if (p.z <= midz) {
-                    pos = BottomLeftBack;
-                } else {
-                    pos = BottomLeftFront;
-                }
-            } else {
-                if (p.z <= midz) {
-                    pos = TopLeftBack;
-                } else {
-                    pos = TopLeftFront;
-                }
-            }
-        } else {
-            if (p.y <= midy) {
-                if (p.z <= midz) {
-                    pos = BottomRightBack;
-                } else {
-                    pos = BottomRightFront;
-                }
-            } else {
-                if (p.z <= midz) {
-                    pos = TopRightBack;
-                } else {
-                    pos = TopRightFront;
-                }
-            }
+    public List<OctreeNode> queryNodes(Triangle triangle) {
+        return OctreeTriangleHandler.queryNodes(this, triangle);
+    }
+
+    protected void addGeometry(Object geometry) {
+        if (geometries == null) {
+            geometries = new ArrayList<>();
         }
-        return pos;
+        geometries.add(geometry);
     }
 
     public List<Object> getGeometries() {
@@ -191,4 +126,11 @@ public class OctreeNode {
         return geometries != null;
     }
 
+    public Vector3 getMax() {
+        return box.max;
+    }
+
+    public Vector3 getMin() {
+        return box.min;
+    }
 }

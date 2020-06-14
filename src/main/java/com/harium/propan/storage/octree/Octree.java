@@ -1,13 +1,15 @@
 package com.harium.propan.storage.octree;
 
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.Triangle;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
 public class Octree implements BSP {
 
-    private int maxDepth = 3;
+    private int maxDepth = 5;
 
     // Upper Level
     protected static final int TopLeftFront = 0;
@@ -44,27 +46,62 @@ public class Octree implements BSP {
     }
 
     public void insert(Vector3 p) {
-        if (!root.insert(p, maxDepth)) {
+        if (!root.contains(p)) {
             resize(p);
             root.insert(p, maxDepth);
         }
+    }
+
+    @Override
+    public void insert(Triangle triangle) {
+        if (!root.contains(triangle)) {
+            resize(triangle);
+            root.insert(triangle, maxDepth);
+        }
+
+        // TODO Maybe resize
+        // Find what nodes intersects with the triangle
+        // For each node, find leafs that intersects
+        // Add the triangle to geometries (more than one node would have the triangle)
     }
 
     private OctreeNode resize(Vector3 p) {
         Set<Object> geometries = getAllGeometries();
 
         Vector3 min = new Vector3(
-            Math.min(root.min.x, p.x),
-            Math.min(root.min.y, p.y),
-            Math.min(root.min.z, p.z));
+            Math.min(root.getMin().x, p.x),
+            Math.min(root.getMin().y, p.y),
+            Math.min(root.getMin().z, p.z));
 
         Vector3 max = new Vector3(
-            Math.max(root.max.x, p.x),
-            Math.max(root.max.y, p.y),
-            Math.max(root.max.z, p.z));
+            Math.max(root.getMax().x, p.x),
+            Math.max(root.getMax().y, p.y),
+            Math.max(root.getMax().z, p.z));
 
-        root.min = min;
-        root.max = max;
+        resize(geometries, min, max);
+        return root;
+    }
+
+    private OctreeNode resize(Triangle triangle) {
+        Set<Object> geometries = getAllGeometries();
+
+        Vector3 min = new Vector3(
+            Math.min(root.getMin().x, Math.min(Math.min(triangle.a.x, triangle.b.x), triangle.c.x)),
+            Math.min(root.getMin().y, Math.min(Math.min(triangle.a.y, triangle.b.y), triangle.c.y)),
+            Math.min(root.getMin().z, Math.min(Math.min(triangle.a.z, triangle.b.z), triangle.c.z)));
+
+        Vector3 max = new Vector3(
+            Math.max(root.getMax().x, Math.max(Math.max(triangle.a.x, triangle.b.x), triangle.c.x)),
+            Math.max(root.getMax().y, Math.max(Math.max(triangle.a.y, triangle.b.y), triangle.c.y)),
+            Math.max(root.getMax().z, Math.max(Math.max(triangle.a.z, triangle.b.z), triangle.c.z)));
+
+        resize(geometries, min, max);
+        return root;
+    }
+
+    private void resize(Set<Object> geometries, Vector3 min, Vector3 max) {
+        root.getMin().set(min);
+        root.getMax().set(max);
         // Resize children
         root.initChildren();
 
@@ -74,8 +111,6 @@ public class Octree implements BSP {
                 root.insert((Vector3) object, maxDepth);
             }
         }
-
-        return root;
     }
 
     private Set<Object> getAllGeometries() {
@@ -102,6 +137,15 @@ public class Octree implements BSP {
     public List<Object> queryNear(Vector3 p) {
         OctreeNode node = root.queryNode(p);
         return node.getGeometries();
+    }
+
+    public List<Object> queryNear(Triangle triangle) {
+        List<OctreeNode> nodes = root.queryNodes(triangle);
+        List<Object> geometries = new ArrayList<>();
+        for (OctreeNode node : nodes) {
+            geometries.addAll(node.getGeometries());
+        }
+        return geometries;
     }
 
     @Override
