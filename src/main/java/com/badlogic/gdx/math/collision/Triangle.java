@@ -8,7 +8,6 @@ public class Triangle implements Serializable {
     public final Vector3 a = new Vector3();
     public final Vector3 b = new Vector3();
     public final Vector3 c = new Vector3();
-
     public final Vector3 normal = new Vector3();
 
     /**
@@ -27,9 +26,25 @@ public class Triangle implements Serializable {
         this.a.set(a);
         this.b.set(b);
         this.c.set(c);
-
         this.normal.set(a).sub(b).crs(b.x - c.x, b.y - c.y, b.z - c.z).nor();
         return this;
     }
 
+    @Override
+    public boolean equals (Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Triangle t = (Triangle) o;
+        return this.a.equals(t.a) && this.b.equals(t.b) && this.c.equals(t.c);
+    }
+
+    @Override
+    public int hashCode () {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + a.hashCode();
+        result = prime * result + b.hashCode();
+        result = prime * result + c.hashCode();
+        return result;
+    }
 }
